@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "docsync"
+version = "0.1.0"
+description = "Local, evidence-based documentation sync proposals for Git repositories"
+requires-python = ">=3.12"
+dependencies = ["markdown-it-py>=3.0,<5"]
+
+[project.scripts]
+docsync = "docsync.cli:main"
+
+[project.optional-dependencies]
+test = ["pytest>=8,<10"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

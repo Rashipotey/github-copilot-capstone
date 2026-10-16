@@ -1,0 +1,1 @@
+"""Independent validation checks for documentation proposals."""
