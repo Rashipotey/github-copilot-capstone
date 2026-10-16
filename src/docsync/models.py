@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from enum import StrEnum
+from enum import StrEnum, auto
 from pathlib import Path
 
 
@@ -29,10 +29,10 @@ class StageStatus(StrEnum):
 
 
 class ValidatorStatus(StrEnum):
-    PASS = "pass"
-    FAIL = "fail"
-    WARNING = "warning"
-    INCONCLUSIVE = "inconclusive"
+    PASS = auto()
+    FAIL = auto()
+    WARNING = auto()
+    INCONCLUSIVE = auto()
 
 
 class ArtifactStatus(StrEnum):

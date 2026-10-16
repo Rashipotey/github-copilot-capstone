@@ -7,6 +7,15 @@ from docsync.proposals import ProposalCandidate, ProposalKind, ProposalProvenanc
 from docsync.reporting import ReportData, ReportSafetyError, format_terminal_summary, render_report
 
 
+def test_validator_status_serialized_labels_are_stable() -> None:
+    assert {status.name: status.value for status in ValidatorStatus} == {
+        "PASS": "pass",
+        "FAIL": "fail",
+        "WARNING": "warning",
+        "INCONCLUSIVE": "inconclusive",
+    }
+
+
 def _proposal() -> ProposalCandidate:
     return ProposalCandidate(
         ProposalKind.CONFIG_SCALAR,
@@ -28,7 +37,7 @@ def _proposal() -> ProposalCandidate:
     )
 
 
-def test_report_includes_required_run_proposal_validation_and_artifact_fields() -> None:
+def test_report_includes_required_run_proposal_validation_and_artifact_fields(tmp_path: Path) -> None:
     report = render_report(
         ReportData(
             execution_status="completed",
@@ -45,7 +54,7 @@ def test_report_includes_required_run_proposal_validation_and_artifact_fields() 
             not_found=("No supported change was found for settings.",),
             resource_limits=("Diff limit: 1048576 bytes.",),
             unresolved_items=("Manual review is required.",),
-            artifact_paths=("C:/repo/docsync-output/docsync-report.md", "C:/repo/docsync-output/docsync.patch"),
+            artifact_paths=(str(tmp_path / "docsync-report.md"), str(tmp_path / "docsync.patch")),
         )
     )
 

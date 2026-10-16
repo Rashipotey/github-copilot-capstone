@@ -9,6 +9,23 @@ from docsync.screening import (
 )
 
 
+def test_detection_category_serialized_labels_are_stable() -> None:
+    assert {category.name: category.value for category in DetectionCategory} == {
+        "PEM_PRIVATE_KEY": "pem_private_key",
+        "PASSWORD_ASSIGNMENT": "password_assignment",
+        "PASSWD_ASSIGNMENT": "passwd_assignment",
+        "SECRET_ASSIGNMENT": "secret_assignment",
+        "TOKEN_ASSIGNMENT": "token_assignment",
+        "API_KEY_ASSIGNMENT": "api_key_assignment",
+        "ACCESS_KEY_ASSIGNMENT": "access_key_assignment",
+        "CLIENT_SECRET_ASSIGNMENT": "client_secret_assignment",
+        "PRIVATE_KEY_ASSIGNMENT": "private_key_assignment",
+        "HTTP_BEARER": "http_bearer",
+        "HTTP_BASIC": "http_basic",
+        "JWT_SHAPED": "jwt_shaped",
+    }
+
+
 @pytest.mark.parametrize(
     ("text", "secret", "category"),
     [

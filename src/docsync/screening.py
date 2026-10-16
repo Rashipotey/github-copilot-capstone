@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from enum import StrEnum
+from enum import StrEnum, auto
 from typing import Iterable
 
 
@@ -14,18 +14,18 @@ class ScreeningState(StrEnum):
 
 
 class DetectionCategory(StrEnum):
-    PEM_PRIVATE_KEY = "pem_private_key"
-    PASSWORD_ASSIGNMENT = "password_assignment"
-    PASSWD_ASSIGNMENT = "passwd_assignment"
-    SECRET_ASSIGNMENT = "secret_assignment"
-    TOKEN_ASSIGNMENT = "token_assignment"
-    API_KEY_ASSIGNMENT = "api_key_assignment"
-    ACCESS_KEY_ASSIGNMENT = "access_key_assignment"
-    CLIENT_SECRET_ASSIGNMENT = "client_secret_assignment"
-    PRIVATE_KEY_ASSIGNMENT = "private_key_assignment"
-    HTTP_BEARER = "http_bearer"
-    HTTP_BASIC = "http_basic"
-    JWT_SHAPED = "jwt_shaped"
+    PEM_PRIVATE_KEY = auto()
+    PASSWORD_ASSIGNMENT = auto()
+    PASSWD_ASSIGNMENT = auto()
+    SECRET_ASSIGNMENT = auto()
+    TOKEN_ASSIGNMENT = auto()
+    API_KEY_ASSIGNMENT = auto()
+    ACCESS_KEY_ASSIGNMENT = auto()
+    CLIENT_SECRET_ASSIGNMENT = auto()
+    PRIVATE_KEY_ASSIGNMENT = auto()
+    HTTP_BEARER = auto()
+    HTTP_BASIC = auto()
+    JWT_SHAPED = auto()
 
 
 _SCREENING_FAILURE = "Screening could not be completed; the affected content was withheld."

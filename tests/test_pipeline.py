@@ -368,6 +368,7 @@ def test_validator_results_are_reported_without_coercion(
     result = _run(repo, output)
 
     assert result.report.execution_status == run_status.value
+    assert len(result.report.proposals) == 1
     assert [item.status for item in result.report.validators] == [
         validator_status,
         ValidatorStatus.PASS,
@@ -377,6 +378,203 @@ def test_validator_results_are_reported_without_coercion(
     assert f"markdown: {validator_status.value}" in report
     if validator_status is not ValidatorStatus.PASS:
         assert f"markdown validation reported {validator_status.value}" in report
+
+
+@pytest.mark.parametrize("validator_status", list(ValidatorStatus))
+def test_only_consistency_pass_permits_candidate_emission(
+    git_repo: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    validator_status: ValidatorStatus,
+) -> None:
+    import docsync.pipeline as pipeline
+    from docsync.models import ValidatorResult
+
+    repo = git_repo
+    _python_repository(repo)
+    _write(repo, "src/api.py", NEW_PYTHON)
+    original = (repo / "README.md").read_bytes()
+    monkeypatch.setattr(
+        pipeline,
+        "validate_consistency",
+        lambda *args, **kwargs: ValidatorResult(
+            "consistency", validator_status, "Focused consistency result."
+        ),
+    )
+    output = tmp_path.parent / f"{tmp_path.name}-consistency-output"
+
+    result = _run(repo, output)
+
+    expected_count = int(validator_status is ValidatorStatus.PASS)
+    assert len(result.report.proposals) == expected_count
+    assert bool(_artifact_text(output, "docsync.patch")) == bool(expected_count)
+    assert result.report.validators[-1].status is validator_status
+    expected_status = (
+        RunStatus.VALIDATION_FAILED if validator_status is ValidatorStatus.FAIL else RunStatus.COMPLETED
+    )
+    assert result.report.execution_status == expected_status.value
+    assert result.exit_code == int(validator_status is ValidatorStatus.FAIL)
+    assert f"proposals: {expected_count}" in result.summary
+    report = _artifact_text(output, "docsync-report.md")
+    assert f"consistency: {validator_status.value}" in report
+    assert "Focused consistency result." in report
+    if not expected_count:
+        assert result.report.warnings == (
+            f"consistency validation reported {validator_status.value}.",
+        )
+        assert result.report.uncertainties == (
+            "src/api.py: proposal withheld because source consistency was not verified.",
+        )
+        assert "Warnings: 1; uncertainties: 1" in result.summary
+    assert (repo / "README.md").read_bytes() == original
+
+
+@pytest.mark.parametrize("suffix", ["json", "toml"])
+@pytest.mark.parametrize("failed_call", [3, 4])
+@pytest.mark.parametrize("failure", ["missing", "raises"])
+def test_consistency_reparse_failure_withholds_only_affected_proposal(
+    git_repo: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    caplog: pytest.LogCaptureFixture,
+    suffix: str,
+    failed_call: int,
+    failure: str,
+) -> None:
+    from docsync.validators import consistency
+
+    repo = git_repo
+    _python_repository(repo)
+    source = f"src/settings.{suffix}"
+    old = '{"timeout": 10}\n' if suffix == "json" else "timeout = 10\n"
+    new = '{"timeout": 15}\n' if suffix == "json" else "timeout = 15\n"
+    _write(repo, source, old)
+    _write(
+        repo, "docs/settings.md",
+        f"Source: `{source}`.\n\n| Path | Value |\n| --- | --- |\n| /timeout | 10 |\n",
+    )
+    _commit(repo)
+    _write(repo, source, new)
+    _write(repo, "src/api.py", NEW_PYTHON)
+    originals = {path: (repo / path).read_bytes() for path in ("README.md", "docs/settings.md")}
+    parse_config = consistency._parse_config
+    calls = 0
+    raw_error = "password=fixture-pipeline-reparse-error-456"
+
+    def parse_with_failure(source_text: str, source_suffix: str):
+        nonlocal calls
+        calls += 1
+        if calls == failed_call:
+            if failure == "raises":
+                raise ValueError(raw_error)
+            return None
+        return parse_config(source_text, source_suffix)
+
+    monkeypatch.setattr(consistency, "_parse_config", parse_with_failure)
+    output = tmp_path.parent / f"{tmp_path.name}-reparse-output"
+
+    result = _run(repo, output)
+
+    assert calls >= failed_call
+    assert result.report.execution_status == RunStatus.COMPLETED.value
+    assert result.exit_code == 0
+    assert [proposal.target_path for proposal in result.report.proposals] == ["README.md"]
+    validations = [item for item in result.report.validators if item.validator == "consistency"]
+    assert [item.status for item in validations] == [ValidatorStatus.PASS, ValidatorStatus.INCONCLUSIVE]
+    detail = (
+        "Configuration evidence could not be reparsed safely." if failure == "missing"
+        else "Source-to-documentation evidence could not be checked safely."
+    )
+    assert validations[-1].sanitized_detail == detail
+    patch = _artifact_text(output, "docsync.patch")
+    assert 'def run(value: str = "new") -> str:' in patch
+    assert "docs/settings.md" not in patch
+    assert "/timeout" not in patch
+    report = _artifact_text(output, "docsync-report.md")
+    assert detail in report
+    assert "consistency: inconclusive" in report
+    assert result.report.warnings == ("consistency validation reported inconclusive.",)
+    assert result.report.uncertainties == (
+        f"{source}: proposal withheld because source consistency was not verified.",
+    )
+    assert "proposals: 1" in result.summary
+    assert "Warnings: 1; uncertainties: 1" in result.summary
+    captured = capsys.readouterr()
+    assert raw_error not in repr(result) + report + patch + captured.out + captured.err + caplog.text
+    assert all((repo / path).read_bytes() == original for path, original in originals.items())
+
+
+@pytest.mark.parametrize("failed_path", ["src/api.py", "README.md"])
+@pytest.mark.parametrize("failure", ["raises", "incomplete", "excluded", "missing"])
+def test_consistency_provenance_scanner_failure_withholds_proposal_safely(
+    git_repo: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    caplog: pytest.LogCaptureFixture,
+    failed_path: str,
+    failure: str,
+) -> None:
+    from dataclasses import replace
+
+    import docsync.pipeline as pipeline
+    from docsync.screening import ScreeningState
+
+    repo = git_repo
+    _python_repository(repo)
+    _write(repo, "src/api.py", NEW_PYTHON)
+    original = (repo / "README.md").read_bytes()
+    validate_consistency = pipeline.validate_consistency
+    raw_error = "password=fixture-pipeline-provenance-error-123"
+
+    def validate_with_scanner_failure(*args, scanner, **kwargs):
+        screen_path = scanner.screen_repository_path
+
+        def screen_with_failure(path: str):
+            if path != failed_path:
+                return screen_path(path)
+            if failure == "raises":
+                raise RuntimeError(raw_error)
+            if failure == "missing":
+                return None
+            return replace(
+                screen_path(path),
+                state=ScreeningState.INCONCLUSIVE if failure == "incomplete" else ScreeningState.COMPLETE,
+                excluded=failure == "excluded",
+                diagnostic=raw_error,
+            )
+
+        with monkeypatch.context() as scoped:
+            scoped.setattr(scanner, "screen_repository_path", screen_with_failure)
+            return validate_consistency(*args, scanner=scanner, **kwargs)
+
+    monkeypatch.setattr(pipeline, "validate_consistency", validate_with_scanner_failure)
+    output = tmp_path.parent / f"{tmp_path.name}-provenance-output"
+
+    result = _run(repo, output)
+
+    assert result.report.execution_status == RunStatus.COMPLETED.value
+    assert result.exit_code == 0
+    assert result.report.proposals == ()
+    assert _artifact_text(output, "docsync.patch") == ""
+    validation = result.report.validators[-1]
+    assert validation.status is ValidatorStatus.INCONCLUSIVE
+    assert validation.evidence_refs == ()
+    detail = "Consistency provenance paths could not be screened safely."
+    assert validation.sanitized_detail == detail
+    report = _artifact_text(output, "docsync-report.md")
+    assert detail in report
+    assert "consistency: inconclusive" in report
+    assert result.report.warnings == ("consistency validation reported inconclusive.",)
+    assert result.report.uncertainties == (
+        "src/api.py: proposal withheld because source consistency was not verified.",
+    )
+    assert "proposals: 0" in result.summary
+    assert "Warnings: 1; uncertainties: 1" in result.summary
+    captured = capsys.readouterr()
+    assert raw_error not in repr(result) + report + captured.out + captured.err + caplog.text
+    assert (repo / "README.md").read_bytes() == original
 
 
 def test_output_collision_always_refuses_and_preserves_both_artifacts(

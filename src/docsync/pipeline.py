@@ -463,7 +463,15 @@ def run_pipeline(config: RunConfig, *, scanner: SecretScanner | None = None) -> 
             candidate_results = _validate_candidate(
                 result.proposal, single_source, inventory, repo_root, scanner
             )
-            proposals.append(result.proposal)
+            if any(
+                validation.validator == "consistency" and validation.status is ValidatorStatus.PASS
+                for validation in candidate_results
+            ):
+                proposals.append(result.proposal)
+            else:
+                uncertainties.append(
+                    f"{snapshot.path}: proposal withheld because source consistency was not verified."
+                )
             validator_results.extend(candidate_results)
             for validation in candidate_results:
                 if validation.status is not ValidatorStatus.PASS:

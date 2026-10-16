@@ -45,9 +45,16 @@ def _result(
         try:
             screened = scanner.screen_repository_path(path)
         except Exception:
-            continue
-        if screened.usable and screened.sanitized_text:
-            refs.append(screened.sanitized_text)
+            return ValidatorResult(
+                "consistency", ValidatorStatus.INCONCLUSIVE,
+                "Consistency provenance paths could not be screened safely.",
+            )
+        if screened is None or not screened.usable or not screened.sanitized_text:
+            return ValidatorResult(
+                "consistency", ValidatorStatus.INCONCLUSIVE,
+                "Consistency provenance paths could not be screened safely.",
+            )
+        refs.append(screened.sanitized_text)
     return ValidatorResult("consistency", status, detail, tuple(refs))
 
 
@@ -577,7 +584,8 @@ def _validate_consistency(
         suffix = PurePosixPath(snapshot.path).suffix
         changed = _parse_config(snapshot.old.text or "", suffix)
         revised = _parse_config(snapshot.new.text or "", suffix)
-        assert changed is not None and revised is not None
+        if changed is None or revised is None:
+            return _result(ValidatorStatus.INCONCLUSIVE, "Configuration evidence could not be reparsed safely.", candidate, scanner)
         changed_path = next(path for path in changed if changed[path] != revised[path])
         leaf = changed_path.rsplit("/", 1)[-1].replace("~1", "/").replace("~0", "~")
         old_source_line = next(

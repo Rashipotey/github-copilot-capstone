@@ -2,7 +2,7 @@ import os
 import re
 import shutil
 import stat
-import subprocess
+import subprocess  # nosec B404 # Required local Git CLI; guarded argument-array execution below.
 import threading
 from dataclasses import dataclass
 from enum import StrEnum
@@ -126,7 +126,7 @@ def _run_bounded(
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            shell=False,
+            shell=False,  # nosec B603 # Resolved Git executable, argument array, bounded pipes and timeout.
         )
     except FileNotFoundError as exc:
         raise GitUnavailableError("Git executable is unavailable.") from exc

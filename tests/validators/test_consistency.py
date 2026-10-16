@@ -15,8 +15,9 @@ from docsync.evidence import (
 from docsync.git import SnapshotSideState
 from docsync.models import DiffScope, StageStatus, ValidatorStatus
 from docsync.proposals import ProposalKind, ProposalStatus, propose_deterministic
-from docsync.screening import SecretScanner
+from docsync.screening import ScreeningState, SecretScanner
 from docsync.targets import SelectedTarget, TargetSelection
+from docsync.validators import consistency
 from docsync.validators.consistency import validate_consistency
 
 
@@ -269,3 +270,79 @@ def test_missing_or_incomplete_evidence_is_never_pass() -> None:
 
     assert validate_consistency(candidate, incomplete_snapshots, inventory).status is ValidatorStatus.INCONCLUSIVE
     assert validate_consistency(candidate, snapshots, missing_target).status is ValidatorStatus.INCONCLUSIVE
+
+
+@pytest.mark.parametrize("failed_path", ["src/api.py", "docs/reference.md"])
+@pytest.mark.parametrize("failure", ["raises", "incomplete", "excluded", "missing"])
+def test_provenance_screening_failure_is_sanitized_and_never_pass(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+    caplog: pytest.LogCaptureFixture, failed_path: str, failure: str,
+) -> None:
+    snapshots, inventory, candidate = python_context()
+    scanner = SecretScanner()
+    screen_path = scanner.screen_repository_path
+    raw_error = "password=fixture-provenance-error-123"
+
+    def screen_with_failure(path: str):
+        if path != failed_path:
+            return screen_path(path)
+        if failure == "raises":
+            raise RuntimeError(raw_error)
+        if failure == "missing":
+            return None
+        return replace(
+            screen_path(path),
+            state=ScreeningState.INCONCLUSIVE if failure == "incomplete" else ScreeningState.COMPLETE,
+            excluded=failure == "excluded",
+            diagnostic=raw_error,
+        )
+
+    monkeypatch.setattr(scanner, "screen_repository_path", screen_with_failure)
+
+    result = validate_consistency(candidate, snapshots, inventory, scanner=scanner)
+
+    assert result.status is ValidatorStatus.INCONCLUSIVE
+    assert result.evidence_refs == ()
+    assert result.sanitized_detail == "Consistency provenance paths could not be screened safely."
+    captured = capsys.readouterr()
+    assert raw_error not in repr(result) + captured.out + captured.err + caplog.text
+
+
+@pytest.mark.parametrize("suffix", ["json", "toml"])
+@pytest.mark.parametrize("failed_call", [3, 4])
+@pytest.mark.parametrize("failure", ["missing", "raises"])
+def test_config_reparse_failure_is_sanitized_and_never_pass(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+    caplog: pytest.LogCaptureFixture, suffix: str, failed_call: int, failure: str,
+) -> None:
+    old = '{"timeout": 10}\n' if suffix == "json" else "timeout = 10\n"
+    new = '{"timeout": 15}\n' if suffix == "json" else "timeout = 15\n"
+    snapshots, inventory, candidate = context(
+        old, new, "| Path | Value |\n| --- | --- |\n| /timeout | 10 |\n",
+        f"src/settings.{suffix}",
+    )
+    parse_config = consistency._parse_config
+    calls = 0
+    raw_error = "password=fixture-reparse-error-456"
+
+    def parse_with_failure(source: str, source_suffix: str):
+        nonlocal calls
+        calls += 1
+        if calls == failed_call:
+            if failure == "raises":
+                raise ValueError(raw_error)
+            return None
+        return parse_config(source, source_suffix)
+
+    monkeypatch.setattr(consistency, "_parse_config", parse_with_failure)
+
+    result = validate_consistency(candidate, snapshots, inventory)
+
+    assert calls >= failed_call
+    assert result.status is ValidatorStatus.INCONCLUSIVE
+    assert result.sanitized_detail == (
+        "Configuration evidence could not be reparsed safely." if failure == "missing"
+        else "Source-to-documentation evidence could not be checked safely."
+    )
+    captured = capsys.readouterr()
+    assert raw_error not in repr(result) + captured.out + captured.err + caplog.text
