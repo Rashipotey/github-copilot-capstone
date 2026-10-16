@@ -1,0 +1,41 @@
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+# Conventional root virtualenv directories; keep nested project directories visible.
+/venv/
+/env/
+
+# Test and coverage artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Type checker and linter caches
+.mypy_cache/
+.ruff_cache/
+.pyright/
+
+# Build and packaging artifacts
+build/
+dist/
+*.egg-info/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+.envrc
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Temporary outputs
+docsync-output/
+.docsync-*.tmp
