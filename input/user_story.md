@@ -2,8 +2,7 @@
 
 ## Hypothetical User Story and Acceptance Criteria
 
-**Purpose:** This is a fictional source document created for a GitHub
-Copilot Agent Mode capstone. It is not an actual Jira ticket or an
+**Purpose:** This is a fictional source document created for a claude code capstone. It is not an actual Jira ticket or an
 approved production specification.
 
 ## 1. Story Metadata
@@ -188,15 +187,3 @@ to raise them one at a time and record human decisions in
 -   Code review findings are resolved or explicitly documented.
 -   The Pull Request includes Summary, Changes Made, Test Evidence,
     Known Limitations, and Reviewer Checklist.
-
-## 12. How to Use This Document
-
-1.  Save this file in your project repository, for example under
-    `input/user-story-docsync.md`.
-2.  Provide the document content to Copilot Chat, or paste the relevant
-    sections into your requirements-gathering prompt.
-3.  Ask Copilot to clarify the unresolved questions one at a time.
-    Answer based on your capstone scope.
-4.  Use the agreed decisions to generate `requirements.md`. Do not treat
-    this hypothetical document as an already-approved final
-    specification.
