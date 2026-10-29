@@ -1,0 +1,10 @@
+## HISTORICAL_RECONSTRUCTION - Secret Screening Gate
+- Timestamp: Original task execution unknown; reconstruction date 2026-10-28.
+- Task: 4. Secret Screening and Fail-Closed Gate
+- Agent: Original implementing agent unknown; reconstruction by the current Copilot assistant.
+- Event: HISTORICAL_RECONSTRUCTION
+- Summary: docs/impl-plan.md Task 4 reports the screening API complete, tests/test_screening.py and tests/test_secret_safety.py at 28 passed in 0.09s, and full suite 104 passed, 4 skipped in 15.04s. It expressly does not claim sink integration at that point; Tasks 8-9 own later output integration. Commit c5e557a3d17d039f716e5b37cfbb2be50c3478e2 adds src/docsync/screening.py and those tests. Commit 2afa32b88ff98997772439a872247653c864378f later modifies screening.py and test_screening.py.
+- Evidence: docs/impl-plan.md Task 4 status/completion evidence; git show --stat c5e557a and 2afa32b. Commit timestamps 2026-10-16T15:27:18+05:30 and 2026-10-16T16:10:20+05:30 are source metadata, not execution timestamps.
+- Outcome: Committed screening code/tests corroborate artifact existence; local test results remain plan-reported. Neither broad CI success nor this reconstruction establishes exhaustive secret detection or optional adapter integration.
+- Errors: Plan reports four filesystem-symlink skips in the full suite. Original error transcript unknown; no secret values copied.
+- Approvals and gaps: Approval, original implementing agent, exact task execution times, and raw local report unavailable. No tests rerun.

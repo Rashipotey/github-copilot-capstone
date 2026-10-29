@@ -1,0 +1,10 @@
+## HISTORICAL_RECONSTRUCTION - Repository, Path, and Git Handling
+- Timestamp: Original task execution unknown; reconstruction date 2026-10-28.
+- Task: 3. Safe Repository, Path, and Git-Diff Handling
+- Agent: Original implementing agent unknown; reconstruction by the current Copilot assistant.
+- Event: HISTORICAL_RECONSTRUCTION
+- Summary: docs/impl-plan.md Task 3 reports bounded Git/path handling complete, focused tests/test_paths.py and tests/test_git.py at 40 passed, 4 skipped, and later path-control remediation at 64 passed, 4 skipped in 33.07s. Those command results are artifact-reported. Commit c5e557a3d17d039f716e5b37cfbb2be50c3478e2 adds src/docsync/paths.py, git.py and corresponding tests. Commit 2afa32b88ff98997772439a872247653c864378f later changes git.py; this confirms a file change, not the precise time or sequence of Task 3 work.
+- Evidence: docs/impl-plan.md Task 3 status and path-control remediation; git show --stat c5e557a and 2afa32b. Recorded commit timestamps: 2026-10-16T15:27:18+05:30 and 2026-10-16T16:10:20+05:30.
+- Outcome: Task-specific implementation/test files committed; local results attributed only to plan. No independent proof of every path/resource boundary from the merged PR alone.
+- Errors: Plan identifies unavailable real filesystem-symlink creation on Windows; simulated cases are reported separately. Original error transcript unknown.
+- Approvals and gaps: Original task approval, implementing identity, execution times, and raw local report unavailable. Scope-correct snapshots are separately mapped to Task 3a; no tasks/tests rerun.
