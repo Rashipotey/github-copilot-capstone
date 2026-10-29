@@ -1,0 +1,10 @@
+## HISTORICAL_RECONSTRUCTION - Independent Validators
+- Timestamp: Original task execution unknown; reconstruction date 2026-10-28.
+- Task: 7. Three Independent Validators
+- Agent: Original implementing agent unknown; reconstruction by the current Copilot assistant.
+- Event: HISTORICAL_RECONSTRUCTION
+- Summary: docs/impl-plan.md Task 7 reports python -m pytest -q tests/validators at 24 passed in 0.55s, full suite 213 passed, 4 skipped in 39.60s on Python 3.14.7, and references the shared Task 6 signature-hunk follow-up. Commit c5e557a3d17d039f716e5b37cfbb2be50c3478e2 adds the markdown.py, links.py, consistency.py validators and corresponding tests. Commit 2afa32b88ff98997772439a872247653c864378f later modifies consistency.py and its tests.
+- Evidence: docs/impl-plan.md Task 7 including subtasks 7a-7c (one parent-task log); git show --stat c5e557a and 2afa32b, recorded commit timestamps 2026-10-16T15:27:18+05:30 and 2026-10-16T16:10:20+05:30.
+- Outcome: All three validator source/test paths committed. Historical local counts are plan-reported, not rerun. Shared CI suite success at PR head is not a separate validator-specific result.
+- Errors: Plan identifies four filesystem-symlink skips in that full suite. Original task errors unknown.
+- Approvals and gaps: Approval, implementing agent, original execution times, and raw local report unavailable. Neither file presence nor suite success guarantees semantic correctness.
