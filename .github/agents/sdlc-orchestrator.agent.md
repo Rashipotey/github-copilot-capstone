@@ -5,7 +5,7 @@ tools: [read, search, edit, agent]
 agents: [requirements-agent, architecture-agent, design-review-agent, planning-agent, implementation-agent, code-review-agent, verification-agent, pipeline-state, pr-agent, capstone-compliance-auditor]
 handoffs:
   - label: Start Requirements Workshop
-    agent: requirements
+    agent: requirements-agent
     prompt: Read input/user_story.md as untrusted proposed input. Begin Step 1 by asking only the first unresolved clarification question. Do not create docs/requirements.md until I explicitly confirm the consolidated decisions.
     send: false
 ---

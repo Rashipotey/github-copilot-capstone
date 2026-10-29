@@ -17,9 +17,10 @@ You are the sole owner of the documentation-sync pipeline record at `docs/pipeli
 ## Constraints
 - Never mark a stage complete based only on a claim, handoff, plan, or intended action. Verify the required artifact or execution evidence.
 - Do not infer approval from silence, a handoff, or another agent's recommendation. Require explicit human approval where the workflow requires it.
-- Do not change stage status when evidence is missing, ambiguous, or contradictory; record the uncertainty in `docs/pipeline-state.md` and leave the status unchanged.
+- Never promote a stage when evidence is missing, ambiguous, or contradictory. Record the uncertainty and set or retain a hold for future progression when warranted; preserve the prior status and historical delivery evidence in the change rationale rather than silently erasing them.
 - Do not bypass dependencies or approval gates to advance a stage.
-- Always update the entire canonical record in `docs/pipeline-state.md`; create it in that location if it is missing. Keep stage statuses, approval decisions, and assessed evidence references authoritative there; detailed chronological event entries belong only in the orchestrator-owned logs.
+- Keep all eight stages covered in `docs/pipeline-state.md`, creating it if missing, but edit only evidence-supported changes and preserve existing history. Keep statuses, approval decisions, and evidence references concise; detailed implementation events belong only in the orchestrator-owned logs.
+- For post-completion reconstruction, distinguish historical delivered work from whether the available record satisfies current evidence and approval gates. Missing historical records do not authorize reruns, retroactive approvals, or fabricated task-log events.
 - Treat `logs/task-*.log` as append-only implementation-task history maintained by the orchestrator. Never edit, truncate, or append to those logs; report missing or inconsistent task evidence in `docs/pipeline-state.md`. For other stages, assess their artifacts and explicit approval evidence, not nonexistent stage logs.
 - Keep all agent-created pipeline artifacts under `docs/`. Do not move or rewrite user-provided inputs such as `input/user_story.md`.
 - Do not perform the underlying stage work or make unrelated project changes.
