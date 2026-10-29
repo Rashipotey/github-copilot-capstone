@@ -41,4 +41,6 @@ Do not log requirements, architecture, design review, planning, standalone code 
 
 Append at the end; never truncate, rewrite, reorder, or silently correct existing entries. Append a referenced correction if necessary. Do not invent historical execution, timestamps, outcomes, errors, or approvals. These initial logs are empty and do not retroactively establish evidence for tasks recorded complete in the plan.
 
-Exclude credentials, secret values, and unnecessary personal data. Distinguish delegation requested from work actually performed. Verify each append succeeded; if it fails, report the error and stop implementation progression until logging is restored. The `pipeline-state` agent reads logs as evidence but does not edit them.
+Exclude credentials, secret values, and unnecessary personal data. Distinguish delegation requested from work actually performed. Verify each append succeeded and preserved the previous content unchanged; if it fails, report the error and stop implementation progression until logging is restored. Delegate only identified, dependency-ready tasks and wait for each result and verified log append before starting the next task. Failed, partial, blocked, or missing task results cannot satisfy a dependent task's prerequisites. The `pipeline-state` agent reads logs as evidence but does not edit them.
+
+These are agent instructions, not a filesystem append-only enforcement mechanism. An empty historical log supplies no execution evidence, but must not be populated by rerunning completed tasks or inventing past events.
