@@ -9,7 +9,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Iterable
 
-from docsync.config import RunConfig
+from docsync.config import DriftConfig, RunConfig
 from docsync.models import DiffScope, RunStatus
 from docsync.paths import (
     PathValidationError,
@@ -54,6 +54,22 @@ class ChangedFile:
     path: str
     status: str
     is_binary: bool
+
+
+@dataclass(frozen=True, slots=True)
+class GitPathChange:
+    """One Git name-status record with its paths in Git-reported order."""
+
+    status: str
+    paths: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class DriftGitChangeSet:
+    """Bounded tracked change metadata for drift analysis."""
+
+    changes: tuple[GitPathChange, ...]
+    limit_reason: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -268,31 +284,47 @@ def _decode_path(raw_path: bytes, repo_root: Path) -> str:
     return path
 
 
-def _parse_name_status(data: bytes, repo_root: Path) -> tuple[tuple[str, str], ...]:
+def _parse_name_status_entries(data: bytes, repo_root: Path) -> tuple[GitPathChange, ...]:
     if not data:
         return ()
     if not data.endswith(b"\x00"):
         raise GitError("Git returned malformed path metadata.")
     fields = data[:-1].split(b"\x00")
-    records: list[tuple[str, str]] = []
+    records: list[GitPathChange] = []
     index = 0
     while index < len(fields):
         status_field = fields[index]
         index += 1
         try:
-            status = status_field.decode("ascii", errors="strict")
+            status_text = status_field.decode("ascii", errors="strict")
         except UnicodeDecodeError as exc:
             raise GitError("Git returned malformed path metadata.") from exc
+        status = status_text[0] if status_text else ""
         if status not in {"A", "C", "D", "M", "R", "T", "U", "X", "B"}:
+            raise GitError("Git returned malformed path metadata.")
+        if status_text != status and (
+            status not in {"C", "R"}
+            or not status_text[1:].isdigit()
+            or int(status_text[1:]) > 100
+        ):
             raise GitError("Git returned malformed path metadata.")
         path_count = 2 if status[0] in "RC" else 1
         if index + path_count > len(fields):
             raise GitError("Git returned malformed path metadata.")
-        paths = fields[index : index + path_count]
+        raw_paths = fields[index : index + path_count]
         index += path_count
-        for raw_path in paths:
-            records.append((_decode_path(raw_path, repo_root), status[0]))
+        paths = tuple(_decode_path(raw_path, repo_root) for raw_path in raw_paths)
+        records.append(GitPathChange(status, paths))
     return tuple(records)
+
+
+def _parse_name_status(data: bytes, repo_root: Path) -> tuple[tuple[str, str], ...]:
+    """Parse name-status metadata into the legacy flattened path/status view."""
+    return tuple(
+        (path, entry.status)
+        for entry in _parse_name_status_entries(data, repo_root)
+        for path in entry.paths
+    )
 
 
 def _parse_numstat(data: bytes, repo_root: Path) -> dict[str, bool]:
@@ -397,6 +429,30 @@ def collect_diff(config: RunConfig) -> GitDiffResult:
         diff,
         RunStatus.COMPLETED,
     )
+
+
+def collect_drift_change_set(config: DriftConfig) -> DriftGitChangeSet:
+    """Acquire tracked staged and unstaged path changes against HEAD, boundedly."""
+    if config.max_changed_files <= 0 or config.max_diff_bytes <= 0:
+        raise GitError("Configured Git limits must be positive.")
+
+    repo_root = inspect_repository(config.repo)
+    common = ["diff", "--no-ext-diff", "--no-textconv", "--no-color", "--find-renames"]
+    metadata = _run_git(
+        repo_root,
+        [*common, "--name-status", "-z", "HEAD", "--"],
+    )
+    changes = _parse_name_status_entries(metadata, repo_root)
+    changed_path_count = sum(len(change.paths) for change in changes)
+    if changed_path_count > config.max_changed_files:
+        return DriftGitChangeSet(changes, "changed-file-limit")
+    if not changes:
+        return DriftGitChangeSet(())
+
+    diff = _run_git(repo_root, [*common, "HEAD", "--"])
+    if len(diff) > config.max_diff_bytes:
+        return DriftGitChangeSet(changes, "diff-size-limit")
+    return DriftGitChangeSet(changes)
 
 
 def _run_git_bytes(

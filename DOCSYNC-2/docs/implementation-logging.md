@@ -1,6 +1,6 @@
 # DOCSYNC-2 Implementation Logging
 
-**Status:** The plan is approved; only I-01 is authorized. Each remaining task still requires explicit approval before it starts.  
+**Status:** The revised implementation plan and this logging guide are approved. I-08 remains proposed and has not been specifically authorized. Do not create/start its task log before explicit I-08 task authorization; do not begin I-08 implementation until its actual task-start event is appended and verified. I-01–I-07 and their approvals are historical and do not authorize I-08.  
 **Scope:** Actual implementation-task events for active story DOCSYNC-2 only. This guide does not authorize implementation, task starts, or log creation.  
 **Source of task scope:** Only the tasks and prerequisites in this story's `docs/impl-plan.md` and the shared SDLC workflow skill. Do not use another story's guide or logs.
 
@@ -17,8 +17,9 @@ Create a task log only after the user explicitly approves both the plan and that
 | **I-05 — Model findings and render analysis status** | `logs/task-I-05.log` | Explicit plan and I-05 approval; I-03 and I-04 complete. Apply accepted complete/partial/fatal and candidate-only rules. |
 | **I-06 — Publish report with containment and no-replace** | `logs/task-I-06.log` | Explicit plan and I-06 approval; I-01 and I-05 complete. Apply accepted G-05/G-06 publication and path-safety rules. |
 | **I-07 — Complete AC-mapped integration and preservation tests** | `logs/task-I-07.log` | Explicit plan and I-07 approval; I-01–I-06 complete. Run the proposed AC-mapped tests and report observed results accurately. |
+| **I-08 — Document observed drift command behavior in shared README** | `logs/task-I-08.log` | Explicit approval of the revised `docs/impl-plan.md` and I-08; I-01–I-07 complete. Document only observed command, output, tracked-source scope, and candidate-only/partial/inconclusive/fatal behavior specified by I-08. Validate with existing tests and local Markdown link/structure checks; add no tooling. |
 
-G-01–G-08 are resolved planning decisions, not tasks and have no task logs. DR3-01/G-04 and DR3-02/G-05 are resolved by the accepted architecture and approved review; neither is an open blocker. DR4-01 is a low-severity history wording issue corrected/superseded by current pipeline state, not a technical blocker. Plan and task approvals remain pending; all tasks are not authorized. No task logs or events have been created.
+G-01–G-08 are resolved planning decisions, not tasks and have no task logs. DR3-01/G-04 and DR3-02/G-05 are resolved by the accepted architecture and Revision 4 of canonical `docs/design-review.md`; neither is an open technical blocker. DR4-01 is a low-severity history wording issue corrected/superseded by current pipeline state, not a technical blocker. I-01–I-07 and their approvals remain historical; they do not authorize I-08. The revised plan and this guide are approved, but I-08 is not specifically authorized. Create/start I-08's log only after explicit I-08 task authorization and predecessor completion, by appending and verifying its actual start event before implementation begins. Existing task events remain append-only under the rules below.
 
 ## Event schema
 

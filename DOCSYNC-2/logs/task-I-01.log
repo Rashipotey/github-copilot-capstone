@@ -1,0 +1,15 @@
+## 2026-10-29T19:46:00.8721623+05:30
+- Task: I-01 — Add isolated drift CLI/configuration
+- Agent: Orchestrator
+- Event type: start
+- Summary/evidence: User approved `docs/impl-plan.md` and explicitly authorized I-01 only. Start event recorded before implementation delegation. Evidence: `docs/pipeline-state.md`, `docs/impl-plan.md`, `docs/implementation-logging.md`.
+- Outcome: In progress; delegation pending.
+- Sanitized errors: None observed.
+
+## 2026-10-29T19:50:37.0585855+05:30
+- Task: I-01 — Add isolated drift CLI/configuration
+- Agent: implementation-agent, verified by orchestrator
+- Event type: outcome
+- Summary/evidence: Added drift CLI/configuration and explicit unavailable handler without entering patch pipeline. Changed `src/docsync/cli.py`, `src/docsync/config.py`, `src/docsync/drift.py`, and `tests/test_drift_cli.py`. Orchestrator ran `py -3.14 -m pytest -q tests/test_drift_cli.py tests/test_cli_args.py tests/test_config.py`: 39 passed. Task scope and resulting files were inspected.
+- Outcome: I-01 complete; no successor task started or authorized.
+- Sanitized errors: Agent reported an earlier `python -m pytest` attempt under Python 3.15 was unavailable because pytest was not installed there; focused Python 3.14 test run passed.

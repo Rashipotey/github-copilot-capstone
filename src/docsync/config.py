@@ -8,6 +8,7 @@ from docsync.models import DiffScope
 
 DEFAULT_MAX_CHANGED_FILES = 100
 DEFAULT_MAX_DIFF_BYTES = 1_048_576
+DRIFT_REPORT_FILENAME = "docsync-drift-report.md"
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,6 +24,22 @@ class RunConfig:
 
     def output_path(self, canonical_repo_root: Path) -> Path:
         """Resolve the configured output directory without validating the path."""
+        if self.output_dir.is_absolute():
+            return self.output_dir
+        return canonical_repo_root / self.output_dir
+
+
+@dataclass(frozen=True, slots=True)
+class DriftConfig:
+    repo: Path
+    output_dir: Path
+    target: str | None
+    excludes: tuple[str, ...] = ()
+    max_changed_files: int = DEFAULT_MAX_CHANGED_FILES
+    max_diff_bytes: int = DEFAULT_MAX_DIFF_BYTES
+
+    def output_path(self, canonical_repo_root: Path) -> Path:
+        """Resolve the configured drift output directory without validating it."""
         if self.output_dir.is_absolute():
             return self.output_dir
         return canonical_repo_root / self.output_dir
