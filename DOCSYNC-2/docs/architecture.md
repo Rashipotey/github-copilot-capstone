@@ -1,95 +1,107 @@
 # DOCSYNC-2 Architecture
 
-**Status:** Revised per the user's requested changes; awaiting Stage 2 review and approval.  
-**Scope:** Stage 2 only. This document describes the architecture for the approved requirements; it does not authorize implementation or later-stage work.
+**Status:** This clarified Stage 2 architecture is explicitly approved by the user; fresh Stage 3 review is in progress. Implementation is not authorized.  
+**Scope:** Stage 2 only. `docs/requirements.md` remains unchanged and is the approved source for R-01–R-09 and AC-01–AC-08.
 
-## Architecture overview
+## Overview and boundaries
 
-Add a report-only drift-analysis path invoked as `docsync drift`. It consumes a selected local Git change set and screened, in-scope repository evidence; it identifies candidate Markdown documents using deterministic signals and emits `docsync-drift-report.md` into the independently configured output directory supplied with `--output-dir <directory>`. It refuses to overwrite an existing report and returns an actionable error. It does not create patches, edit source or documentation, execute repository code, or call external services.
+Add a report-only `docsync drift` command. It reads a defined tracked Git change set and screened, in-scope repository evidence, identifies potential Markdown documentation candidates, and writes the fixed `docsync-drift-report.md` to the separately configured `--output-dir <directory>`. It must not execute repository code, modify source or existing documentation, create/apply patches, commit, or call an external service or LLM.
 
-### Components and responsibilities
+### Prior approved architecture baseline retained
 
-| Component | Responsibility |
+The following prior architecture choices remain unchanged: the separate drift CLI command; independently configured output directory and fixed report filename; no-overwrite behavior; report-only, non-destructive operation; candidate-only findings; existing Python/`argparse` project baseline; and focused renderer validation without adding a Markdown-validation dependency.
+
+### User-directed revisions
+
+These are explicit architecture clarifications from the user; they do not amend approved requirements:
+
+- **Changed inputs (G-01, G-03):** v1 analyzes tracked added or modified `.py`, `.json`, and `.toml` files only. The change set is tracked staged and unstaged changes compared with `HEAD`; exclude untracked files. Do not offer branch/range selection or interactive change selection. A Git rename maps its new/current path to added and that path is analyzed if eligible; its old path is reported deleted/unanalyzed. Other deleted paths and unsupported inputs are reported as unanalyzed. Sort paths deterministically.
+- **Candidate selection (G-02):** One candidate is selected. With multiple candidates and no `--target`, list candidates, return nonzero, and produce neither a Markdown report nor a patch. An explicit invalid target produces an actionable error listing valid candidates. With zero candidates, the report states “no relationship established.” Candidates are never called verified.
+- **Evidence (G-04):** Use repository-relative POSIX paths from Git. Match source-path text exactly and case-sensitively. Match source stems, symbols, and configuration keys as exact case-sensitive tokens; ASCII letters, digits, and underscore are token characters. The source-stem match is the v1 filename-similarity signal. A Markdown document shares a directory only when its immediate parent path exactly equals the source's immediate parent path. For each changed source, the candidate set is the union of documents matching any signal; record every matching reason. Use no scores or precedence. One candidate is selected as candidate-only; multiple candidate paths are ambiguous and follow G-02, with a valid `--target` selecting one. Zero matching signals means “no relationship established.” Multiple candidate paths preserve conflict/ambiguity; zero signals are insufficient evidence. No candidate is confirmed or verified.
+- **Outcomes (G-05):** Git/change-set acquisition failure, unsafe configuration/output path, or any required decoding/screening safety failure is fatal and produces no report. Deleted, unsupported, out-of-scope, size-limited, unreadable, or parse-failed files are marked unanalyzed and contribute no content. A partial report is safe/useful only if at least one eligible source was successfully decoded, screened, and analyzed, including an explicit no-relationship result. If any inputs are unanalyzed and that condition holds, publish a clearly labeled partial report and return nonzero; otherwise write no report. Skipped items are never counted as analyzed.
+- **Output (G-06):** `--output-dir` must already exist. Validate resolved paths and reject unsafe symlink/junction (reparse-point) traversal. Refuse collisions; publish exclusively without replacement and clean temporary files on failure. Write only the report; no patch/apply path or source/documentation modification is permitted.
+- **Validation (G-07):** The validation strategy below maps each approved AC verbatim to proposed automated test identifiers. These are plans, not test results.
+
+## Components and responsibilities
+
+| Component | Responsibility and rationale |
 |---|---|
-| CLI/configuration extension | Expose drift analysis as `docsync drift`; collect the repository, diff scope, exclusions, limits, and output directory through `--output-dir <directory>`. Use the deterministic filename `docsync-drift-report.md`. Reuse the current Python `argparse` CLI and `RunConfig` patterns where practical. |
-| Change-set acquisition | Reuse `docsync.git` repository inspection and bounded local Git diff collection. Normalize change metadata; exclude deleted source files as required. |
-| Evidence collection and safety | Reuse `docsync.evidence`, `docsync.screening`, and `docsync.paths` patterns for bounded snapshots, current Markdown inventory, exclusions, safe path handling, and evidence screening. Incomplete or unsafe required evidence must prevent a complete-success result. |
-| Candidate matcher *(new responsibility)* | Compare each eligible changed source input with current Markdown documents using the approved deterministic signals: filename similarity, shared path/directory, and source-file references in Markdown. Preserve signal evidence for explanations. All matches remain candidates, not confirmed relationships; do not assign confidence scores or reliability labels. Eligible source-file types remain deferred and block implementation. |
-| Finding/report model and renderer | Represent changed inputs, candidate documents, signal-based reasons, no-candidate results, ambiguities, skipped inputs, and analysis status; render a safe Markdown report with potential-drift language. Reuse the existing report-safety conventions where suitable. |
-| Report-only publisher *(new responsibility)* | Validate the independently configured `--output-dir <directory>` and write only `docsync-drift-report.md`, using safe path and output protections consistent with `docsync.paths` and `docsync.artifacts`. It must not invoke patch creation or modify repository inputs. If the report already exists, refuse to overwrite it and return a clear, actionable error; there is no overwrite option. |
+| CLI/configuration | Add the separate `docsync drift` command and `--output-dir <directory>`; preserve the fixed report name. Reuse the current Python `argparse` entry point and `RunConfig` patterns where practical. |
+| Change-set acquisition | Reuse bounded local Git inspection primitives, but define drift input as tracked staged and unstaged changes against `HEAD`; filter eligible statuses/extensions, retain unsupported/deleted path notices, and sort normalized paths. Do not route through branch/range modes or include untracked files. |
+| Evidence collection and safety | Reuse `docsync.evidence`, `docsync.screening`, and `docsync.paths` patterns for screened snapshots, current Markdown inventory, exclusions, file/diff limits, and safe reads. Distinguish available, skipped, failed, and inconclusive evidence. |
+| Candidate analysis | Form the candidate set from the G-04 union of exact Markdown source-path references, token-bounded source-stem/symbol/configuration-key matches, and same-immediate-parent matches. Retain every matched reason plus conflict/insufficient-evidence state. Apply G-02 to multiple candidates. Do not claim confirmed relationships or introduce scoring or precedence. |
+| Finding model and Markdown renderer | Model candidate findings, no-relationship results, ambiguity, conflicting/insufficient evidence, unsupported/unanalyzed inputs, and complete/partial/fatal outcome. Render safely with potential-drift language and sanitized diagnostics. |
+| Report-only publisher | Validate the existing output directory and resolved report path, then create only `docsync-drift-report.md` with exclusive no-replace semantics. Clean up temporary artifacts on failure. Reuse safe path/publication primitives only where they can be separated from patch creation. |
 
-### Interactions and data flow
+## Technology choices and rationale
 
-1. `docsync drift` parses its configuration, including `--output-dir <directory>`, and validates repository/output paths.
-2. The change-set component obtains the selected Git diff and changed-path/status metadata within configured file and diff limits.
-3. Evidence collection filters out deleted source inputs, applies repository scope and exclusions, and obtains screened snapshots and a bounded inventory of current Markdown. Eligible source-file types are deferred; this decision must be clarified before implementation.
-4. The matcher applies the approved deterministic signals to eligible changed sources and Markdown inventory. It records the signals that support each candidate. All matches remain candidates without confidence scores or reliability labels. When multiple candidates exist, the user must select a candidate Markdown file using `--target <repository-relative-path>`. If multiple candidates exist and `--target` is absent, list candidate paths, return a clear error, and do not create a patch. Whether the Markdown report is still written in this error case remains unresolved and blocks implementation.
-5. The report model records findings, evidence-based reasons, ambiguity/no-candidate information, skipped inputs, and whether analysis was complete. A failure or incomplete evidence set is reported as such, never as a successful complete analysis.
-6. The report-only publisher validates the independently configured output directory and writes `docsync-drift-report.md` only if that file does not already exist. On collision, it refuses to overwrite and returns a clear, actionable error. It does not write a patch or touch source/documentation files.
+- **Python 3.12+ and existing `docsync` package:** established project baseline (`pyproject.toml`).
+- **Standard-library `argparse` and current configuration patterns:** the existing entry point and `RunConfig` are available; a separate command isolates drift from the proposal workflow.
+- **Local Git CLI through existing `docsync.git`:** current change acquisition is local and bounded; no repository code execution is needed. Drift must apply its own approved `HEAD`/tracked-change contract rather than inherit arbitrary scope modes.
+- **Existing screening, path, and report-safety facilities:** reuse `docsync.screening`, `docsync.paths`, and `docsync.reporting` facilities to preserve bounded evidence handling, safe path checks, and constrained Markdown rendering.
+- **No added service or dependency:** no external LLM/API or separate Markdown-validation library is introduced. Focused renderer and integration tests must establish valid report output.
 
-## Boundaries and technology choices
+The current `run_pipeline`/`write_artifacts` path writes a report and patch and must not be reused unchanged. The drift flow is report-only. Existing output-publication primitives may inform safe exclusive creation, but do not invoke the combined report-and-patch writer.
 
-### Existing technical baseline
+## Matching boundary and requirement gap
 
-- **Python 3.12+** and the existing `docsync` package are the project baseline (`pyproject.toml`).
-- The current entry point is `docsync.cli:main`, implemented with the Python standard-library `argparse`.
-- Local change collection already uses Git through `docsync.git`; no repository code execution is needed.
-- Existing modules provide exclusion matching and resource limits (`config.py`), screened snapshots and Markdown inventory (`evidence.py`, `screening.py`), path validation (`paths.py`), and safe Markdown report conventions (`reporting.py`).
-- The architecture uses focused tests for the constrained Markdown renderer; it does not add a separate `markdown-it-py` validation step.
-- No new network service, LLM/API, or documentation mutation path is in scope.
+Static inspection of `src/docsync/targets.py` found these current mechanisms:
 
-These are proposed reuse choices grounded in the current codebase, not approval of a particular implementation. In particular, the existing `run_pipeline` and `write_artifacts` paths generate a report and a patch; they must not be reused unchanged for this report-only feature. The existing `select_targets` path serves deterministic proposal generation, currently considers a narrower set of source formats and evidence anchors, and does not implement the complete approved candidate-signal behavior. It is not a substitute for the drift matcher.
+- Eligible snapshots currently include non-binary `.py`, `.json`, and `.toml` inputs.
+- Source evidence includes the changed source path; Python `def`/`class` names; JSON keys; and TOML keys.
+- Markdown matching checks source-path text and token-bounded symbol/key text. A filename-stem mention is considered only as an ambiguity candidate when no stronger hit exists. Repeated or multi-document hits can be marked ambiguous or conflicting; incomplete evidence withholds selection.
+- This selector is for proposal target selection, not a drift matcher. It does not implement filename-similarity rules or shared-directory matching as stated in approved R-02, and current stem fallback is not a defined similarity policy.
 
-### Scope boundary
+The drift candidate set follows G-04, not the existing proposal selector. Reuse existing primitives only where they implement the stated G-04 matches; do not assume the proposal selector supplies the exact path normalization or immediate-parent rule. Paths are repo-relative POSIX strings; path references are exact and case-sensitive. Token matches are exact and case-sensitive with ASCII letters, digits, and underscore as token characters. The source stem supplies the v1 filename-similarity signal; exact immediate-parent equality supplies the shared-directory signal. Matching reasons form a union, with no ranking. Multiple distinct candidate paths constitute ambiguity/conflicting evidence and follow G-02; zero matches are insufficient evidence and mean “no relationship established.” A valid explicit target resolves the multiple-candidate selection only; the selected document remains a candidate, not a verified relationship. No reliability score or fuzzy matching is introduced.
 
-**In scope:** current, non-deleted source changes; current Markdown candidate documents; configured repository scope and limits; deterministic, evidence-based candidate reporting; an independently configurable report destination; sanitized failure reporting.
+## Data flow and outcomes
 
-**Out of scope:** unchanged/pre-existing drift; deleted source files; automatic documentation or source edits; patches, commits, or pull requests; non-Markdown documentation; semantic-equivalence guarantees; repository-code execution; external LLM/API judgments.
+1. Parse `docsync drift`, `--output-dir`, and optional explicit `--target`; validate the existing output directory and its resolved path components before publication.
+2. Read tracked staged and unstaged changes against `HEAD`; apply configured repository scope and file/diff limits. Exclude untracked inputs. Classify tracked added/modified `.py`, `.json`, and `.toml` as analyzable. Map a rename's new/current path to added and analyze it if eligible; report its old path as deleted/unanalyzed. Report other deleted and unsupported paths as unanalyzed. Normalize and sort paths deterministically.
+3. Collect and screen current source snapshots and the bounded current Markdown inventory. Do not execute repository files. Mark deleted, unsupported, out-of-scope, size-limited, unreadable, or parse-failed files unanalyzed and do not use their content. Any required decoding/screening safety failure is fatal. Skipped items are never counted as analyzed.
+4. For each eligible changed source, form the candidate set as the union of exact, case-sensitive repo-relative POSIX source-path references; case-sensitive token matches for source stem, symbols, and configuration keys using ASCII letters/digits/underscore as token characters; and exact immediate-parent matches. Record every reason. Do not score or rank. Multiple distinct candidate paths are ambiguous/conflicting and follow G-02; a valid explicit target selects one, while no target lists candidates and stops nonzero without a report or patch. Reject an invalid target with an actionable error and valid candidates. Zero matching signals means insufficient evidence and “no relationship established.” Candidates are never verified.
+5. Classify the run. **Complete:** all required eligible inputs/evidence are analyzed and no inputs are marked unanalyzed; write a complete report and return success, including when analysis has no candidate findings. **Partial:** one or more inputs are unanalyzed; publish a clearly labeled report and return nonzero only if at least one eligible source was successfully decoded, screened, and analyzed (including a no-relationship result); otherwise write no report. **Fatal:** Git/change-set acquisition failure, unsafe configuration/output path, or required decoding/screening safety failure; return a sanitized error and write no report. Skipped items are never successful findings or no-findings.
+6. Publish only the fixed Markdown report for complete or partial outcomes, after validating containment within the resolved designated output directory. Refuse an existing destination and use exclusive no-replace creation; remove temporary files on failure. No report is written for fatal errors, a partial run with no safe useful findings, or the no-target multi-candidate outcome.
+
+**Path boundary:** preserve the independently configured output location. Existing `RunConfig` resolves relative output directories against the canonical repository root; do not introduce a broader repository-root containment rule. Resolve and validate the designated path, require its directory to exist, reject symlink/junction traversal, ensure the final report remains within that resolved directory, and never write anywhere else. Do not silently create the directory.
 
 ## Requirement traceability
 
-| Requirements / acceptance | Architectural mapping |
+| Requirement | Architectural mapping |
 |---|---|
-| **R-01 / AC-01** | Change-set acquisition and candidate matcher analyze current changes, exclude deleted source files, and do not scan unchanged documents as independent drift findings. |
-| **R-02 / AC-01, AC-05** | Matcher uses the three approved deterministic signals; all findings identify candidates rather than confirmed relationships and have no confidence score or reliability label. Multiple candidates require `--target <repository-relative-path>`; without it, candidate paths are listed and the command returns an error without a patch. |
-| **R-03 / AC-02** | Matcher retains signal evidence; report model and renderer express a reason for each candidate based on that evidence. |
-| **R-04 / AC-03** | `docsync drift --output-dir <directory>` and the report-only publisher produce `docsync-drift-report.md` in the independently configured output directory. |
-| **R-05 / AC-04** | Report model represents changed sources with no candidate as “no relationship established”; candidates are not assigned reliability labels. |
-| **R-06 / AC-05** | Renderer consistently labels findings as potential drift and candidate associations, not confirmed inaccuracies or relationships. |
-| **R-07 / AC-06** | Evidence collection reuses configured scope, exclusions, per-file limits, aggregate/change limits, and safe path handling. |
-| **R-08 / AC-07** | Separate publisher writes only `docsync-drift-report.md` in the designated output directory; it does not call patch creation or modify repository inputs. Path containment is required, and an existing report is refused without replacement. |
-| **R-09 / AC-08** | Pipeline status and publisher distinguish complete, incomplete, and failed analysis; incomplete evidence cannot be presented as complete success. |
+| R-01 | Change-set acquisition analyzes current tracked added/modified eligible inputs, excludes untracked inputs, maps rename new/current paths to added and old paths to deleted/unanalyzed, and reports other deleted/unsupported inputs as unanalyzed. |
+| R-02 | Candidate generation follows the G-04 union using exact case-sensitive repo-relative POSIX source-path references, case-sensitive token-bounded source-stem/symbol/config-key matches, and exact immediate-parent equality. Every matched reason is recorded; any match yields a candidate only. Multiple candidate paths are ambiguous and follow G-02; zero signals means no relationship established. |
+| R-03 | Finding model retains evidence for explanations; renderer reports only supported reasons and preserves insufficient/conflicting evidence. |
+| R-04 | Separate `docsync drift --output-dir <directory>` command writes fixed `docsync-drift-report.md` for complete/partial results. |
+| R-05 | Report states “no relationship established” when no defined candidate signal matches. Multiple candidate paths remain ambiguous unless a valid `--target` is provided; unsupported/deleted and other unanalyzed inputs are separately marked unanalyzed, not no-candidate findings. |
+| R-06 | Candidate-only, potential-drift wording; no verified claims, unsupported inference, scores, reliability labels, or external LLM. |
+| R-07 | Evidence collection enforces configured scope/exclusions and existing file/diff limits; unsupported, skipped, and incomplete inputs are surfaced. |
+| R-08 | Report-only publisher writes only beneath the validated designated output directory and never modifies source or existing documentation. |
+| R-09 | Complete, partial, and fatal outcomes are distinct; partial is labeled and nonzero, fatal produces no report, and skipped/unanalyzed inputs are never counted as analyzed. A partial run with no safe useful findings produces no report; a complete run can produce an empty-findings report. |
 
-## Risks and mitigations
+## Architecture validation strategy — proposed AC-to-test map
 
-- **Uncalibrated candidate matching:** The user selected candidate-only output without reliability labels or scores. Keep signals visible and findings qualified.
-- **False positives or missed relations:** Filename/path signals can be weak and source-reference signals may be absent. Report the evidence and ambiguity without claiming correctness.
-- **Unsafe or sensitive repository content:** Treat repository data as untrusted; reuse screening and path-validation protections; do not execute files or expose raw diagnostics, secrets, or environment data.
-- **Incomplete analysis:** Git, inventory, screening, size-limit, or read errors can omit evidence. Fail closed for complete-success reporting and clearly surface sanitized status.
-- **Report collision or path escape:** Use validated destination handling, refuse to replace an existing report with an actionable error, and protect repository inputs.
-- **Incompatible reuse:** The current pipeline writes a report and patch, and its target selector is proposal-oriented. A dedicated report-only flow is needed to avoid accidental patch generation or unsupported matching assumptions.
+The exact acceptance-criterion sentences below are copied verbatim from approved `docs/requirements.md`. Test identifiers are proposed and have not been implemented or run.
 
-## Feasibility and completeness assessment
+| AC (verbatim) | Proposed automated test identifiers |
+|---|---|
+| **AC-01:** For current, non-deleted source changes, identify potentially affected Markdown documentation. Apply the confirmed candidate signals where no explicit relationship exists, and do not include unchanged documentation solely because it may have pre-existing drift. | `test_drift_uses_tracked_added_modified_sources_only`; `test_drift_maps_rename_new_path_to_added_and_old_path_to_deleted`; `test_drift_excludes_untracked_and_reports_deleted_unanalyzed`; `test_drift_reports_unsupported_inputs`; `test_drift_orders_paths_deterministically`; `test_drift_candidate_union_and_exact_match_boundaries` |
+| **AC-02:** Each flagged documentation candidate has a reason supported by available repository evidence. | `test_drift_records_each_matched_candidate_reason`; `test_drift_multiple_candidate_paths_preserve_ambiguity`; `test_drift_explicit_target_resolves_selection_only` |
+| **AC-03:** Successful analysis produces a valid Markdown report through the separate drift-detection CLI command at a separately configurable destination. | `test_drift_cli_writes_markdown_to_output_directory`; `test_drift_report_uses_fixed_name`; `test_drift_successful_empty_findings_writes_report`; `test_drift_partial_report_is_labeled_and_nonzero` |
+| **AC-04:** Relevant changed source files with no reliable documentation candidate are reported as having no relationship established. | `test_drift_no_candidate_reports_no_relationship_established` |
+| **AC-05:** Findings remain potential issues, candidates are not represented as confirmed relationships, and ambiguous candidates do not result in documentation changes or patches. Multiple candidates require explicit user target selection. | `test_drift_findings_use_candidate_only_language`; `test_drift_selects_single_candidate`; `test_drift_multiple_candidates_without_target_list_and_write_nothing`; `test_drift_invalid_target_lists_valid_candidates`; `test_drift_never_creates_patch` |
+| **AC-06:** Files outside configured scope or size limits are handled according to the existing scope and limit rules. | `test_drift_applies_scope_exclusions_and_size_limits`; `test_drift_marks_limited_or_unsupported_inputs_unanalyzed` |
+| **AC-07:** Generating a report leaves source files and existing documentation unchanged and writes only within the designated report output location. | `test_drift_preserves_repository_inputs`; `test_drift_requires_existing_output_directory`; `test_drift_rejects_symlink_and_junction_escape`; `test_drift_refuses_existing_report_without_replacement`; `test_drift_publishes_exclusively_and_cleans_temporary_files` |
+| **AC-08:** An analysis failure is communicated clearly and is not represented as successful complete analysis. | `test_drift_complete_partial_and_fatal_outcomes`; `test_drift_partial_returns_nonzero_and_is_labeled`; `test_drift_fatal_acquisition_config_path_or_decode_screen_failure_writes_no_report`; `test_drift_read_or_parse_failure_is_unanalyzed`; `test_drift_partial_includes_successful_no_relationship_result`; `test_drift_partial_without_successfully_analyzed_source_writes_no_report`; `test_drift_errors_are_sanitized`; `test_drift_never_counts_skipped_items_as_analyzed` |
 
-Static inspection of the existing package and configuration shows a feasible local implementation path: Python/argparse and the package entry point exist; Git diff collection, changed-file metadata, exclusions, limits, safe repository reads, Markdown inventory, screening, and report-safety patterns exist. The existing artifact writer is specifically unsuitable unchanged because it creates a patch alongside the report. The drift matcher and report-only publishing path are new responsibilities.
+Proposed tests are not implemented or run. The candidate-union and evidence-reason tests cover the user-approved operational definitions of filename similarity, shared directory, source references, and candidate-only outcomes.
 
-Completeness remains conditional on decisions below. Eligible source-file types are deferred. Whether the report is written when multiple candidates lack an explicit target is unspecified. These are blockers before implementation. No tests or runtime checks were run for this architecture-only stage.
+## Risks and open issues
 
-## Decisions and blocking unresolved questions
+- **Incomplete or sensitive evidence:** Screening, limits, and path validation can make evidence unavailable; represent that explicitly and sanitize diagnostics.
+- **False positives and misses:** Candidate associations remain potential; preserve ambiguity/conflicts and do not infer unsupported relationships.
+- **Failure classification:** A file-level unreadable/parse-failed item is unanalyzed; any required decoding/screening safety failure is fatal. Partial usefulness requires at least one safely analyzed eligible source, including a no-relationship result.
+- **Output safety:** A destination collision, path escape, link/reparse point, or failed publication must not replace existing artifacts or leave temporary files.
+- **Incompatible reuse:** The current proposal pipeline and artifact writer also generate patches; they are not suitable as the drift command’s execution or publication path.
 
-The user directed this revision to use:
-
-- `docsync drift` as the CLI interface.
-- `--output-dir <directory>` independently of the files being analyzed.
-- `docsync-drift-report.md` as the deterministic report filename.
-- No-replace collision handling: if the report exists, refuse to overwrite it and return a clear, actionable error. No overwrite option is provided.
-- `--target <repository-relative-path>` for explicit non-interactive selection when multiple candidates exist. If omitted, list candidates, return a clear error, and do not create a patch.
-- Candidate-only findings without confidence scores or reliability labels.
-- Focused tests for the constrained Markdown renderer, without a separate `markdown-it-py` validation step.
-
-The following decisions remain explicitly deferred and block implementation:
-
-1. **Eligible source-file types:** The user directed that this remain deferred. Do not infer the eligible types from proposal-generation support or other existing behavior; obtain clarification before implementation.
-2. **Report behavior on missing target:** When multiple candidates exist and `--target` is omitted, the command must list candidates, return a clear error, and not create a patch. Whether it also writes a Markdown report is not specified; clarify before implementation.
-
-The architecture is revised and awaits the user's review and explicit Stage 2 approval. No Design Review or implementation is authorized by this artifact.
+No tests, Git operations, or code execution were performed for this architecture revision.
