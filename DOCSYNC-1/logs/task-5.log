@@ -1,0 +1,10 @@
+## HISTORICAL_RECONSTRUCTION - Evidence and Target Selection
+- Timestamp: Original task execution unknown; reconstruction date 2026-10-28.
+- Task: 5. Bounded Evidence Collection and Documentation Target Selection
+- Agent: Original implementing agent unknown; reconstruction by the current Copilot assistant.
+- Event: HISTORICAL_RECONSTRUCTION
+- Summary: docs/impl-plan.md Task 5 reports screened bounded evidence/target selection complete, tests/test_evidence.py and tests/test_targets.py at 35 passed in 8.39s, and full suite 153 passed, 4 skipped in 38.60s on Python 3.14. It separates endpoint source snapshots from current Markdown inventory and does not claim later proposal/writer/pipeline integration in that task record. Commit c5e557a3d17d039f716e5b37cfbb2be50c3478e2 adds src/docsync/evidence.py, targets.py and those tests.
+- Evidence: docs/impl-plan.md Task 5 status/completion evidence; git show --stat c5e557a, recorded timestamp 2026-10-16T15:27:18+05:30 (not task execution time).
+- Outcome: Task-specific source/tests committed; historical focused results attributed to plan only. Dependencies include Task 3a in addition to Tasks 1-4; chronological execution of dependencies was not recovered.
+- Errors: Plan identifies four filesystem-symlink skips in the full suite. Original task errors unknown.
+- Approvals and gaps: Approval, implementing identity, execution times, and raw local report unavailable. Target-selection safety coverage is reported by the artifact, not independently re-executed or proved by PR merge.

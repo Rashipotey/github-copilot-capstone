@@ -1,0 +1,16 @@
+## 2026-10-29T21:09:15.3508891+05:30
+- Task: I-04 — Match candidates and handle selection
+- Agent: Orchestrator
+- Event type: start
+- Summary/evidence: I-03 completed; user-authorized I-04 is dependency-ready. Start is recorded before delegation for deterministic candidate signals, evidence reasons, and selection outcomes.
+- Outcome: In progress; delegation pending.
+- Sanitized errors: None observed.
+
+## 2026-10-29T21:15:54.6577764+05:30
+- Task: I-04 — Match candidates and handle selection
+- Agent: implementation-agent
+- Event type: outcome
+- Summary/evidence: Added exact G-04 candidate matching, retained matching reasons/evidence lines, and implemented G-02 candidate-only selection outcomes. Verified implementation in src/docsync/drift_matching.py and tests/test_drift_matching.py.
+- Checks: py -3.14 -m pytest -q tests/test_drift_matching.py tests/test_targets.py — 19 passed.
+- Outcome: Complete; I-05 prerequisites satisfied.
+- Sanitized errors: None observed in final focused run.

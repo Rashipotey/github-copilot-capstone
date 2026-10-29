@@ -1,0 +1,57 @@
+## 2026-10-29T21:17:45.5927493+05:30
+- Task: I-05 — Model findings and render analysis status
+- Agent: Orchestrator
+- Event type: start
+- Summary/evidence: I-03 and I-04 completed; user-authorized I-05 is dependency-ready. Start is recorded before delegation for evidence-supported findings, no-relationship/ambiguity, unanalyzed inputs, and G-05 outcome rendering.
+- Outcome: In progress; delegation pending.
+- Sanitized errors: None observed.
+
+## 2026-10-29T21:27:26.2540163+05:30
+- Task: I-05 — Model findings and render analysis status
+- Agent: implementation-agent and Orchestrator
+- Event type: outcome
+- Summary/evidence: Added typed complete/partial/fatal and selection outcomes, candidate-only Markdown rendering, unanalyzed-input reporting, screening/escaping, and a report result for I-06. Review found the temporary CLI handler return contract had changed; analysis now uses analyze_drift while run_drift remains explicitly unavailable until I-06. Narrowed expected failure handling and preserved sanitized fatal results.
+- Checks: py -3.14 -m pytest -q tests/test_drift_analysis.py tests/test_drift_evidence.py tests/test_drift_matching.py tests/test_drift_cli.py — 36 passed.
+- Outcome: Complete; I-06 prerequisites satisfied.
+- Sanitized errors: One initial CLI regression was observed and corrected; none remained in the final run.
+
+## 2026-10-29T21:56:05.3484720+05:30
+- Task: I-05 — Model findings and render analysis status
+- Agent: Orchestrator
+- Event type: start
+- Summary/evidence: Corrective follow-up to the prior I-05 outcome, authorized within existing scope. I-07 exposed that a reason description ending in the credential label token followed by a colon immediately before a Markdown code span makes SecretScanner inconclusive and prevents report publication. Narrowly change report formatting without weakening screening; I-07 remains blocked until regression tests pass.
+- Outcome: Corrective follow-up in progress.
+- Sanitized errors: None.
+
+## 2026-10-29T22:03:09.2431350+05:30
+- Task: I-05 — Model findings and render analysis status
+- Agent: Orchestrator
+- Event type: outcome
+- Summary/evidence: Changed candidate-reason formatting so credential-label-like text is not followed by a colon before a Markdown code span; screening remains fail-closed. Added tests/test_drift_analysis.py::test_drift_reason_label_does_not_trigger_credential_screening.
+- Checks: py -3.14 -m pytest -q tests — 396 passed.
+- Outcome: Corrective follow-up complete; the I-07 publication blocker is resolved.
+- Sanitized errors: The earlier screening failure was corrected; none remained in the final suite.
+
+## 2026-10-29T22:44:30.0439255+05:30
+- Task: I-05 — Model findings and render analysis status
+- Agent: Orchestrator
+- Event type: start
+- Summary/evidence: User authorized the CR-03 follow-up: capped Markdown inventory must be reported as inconclusive/insufficient evidence, without candidate selection or a “No relationship established” claim; retain the partial status and limit notice.
+- Outcome: Corrective follow-up in progress; implementation and checks not yet observed.
+- Sanitized errors: None observed.
+
+## 2026-10-29T22:46:31.1646034+05:30
+- Task: I-05 — Model findings and render analysis status
+- Agent: Orchestrator
+- Event type: correction
+- Summary/evidence: The initial multi-file patch applied the model, matcher, renderer, and analysis-test changes but failed to locate the matching-test hunk. Inspected the partial result and applied the remaining matching-test change separately.
+- Outcome: Patch-hunk failure recovered; no applied changes were lost.
+- Sanitized errors: One patch context mismatch; no sensitive data observed.
+
+## 2026-10-29T22:46:48.4651255+05:30
+- Task: I-05 — Model findings and render analysis status
+- Agent: Orchestrator
+- Event type: outcome
+- Summary/evidence: Propagated the capped-inventory flag through evidence collection; matching now withholds candidates and reports insufficient evidence, including when a target is supplied. Rendering no longer claims “No relationship established” for this case. Added matching and partial-report regression tests. Ran `py -3.14 -m pytest -q tests/test_drift_matching.py tests/test_drift_analysis.py tests/test_drift_evidence.py tests/test_drift_end_to_end.py`: 38 passed.
+- Outcome: CR-03 corrective implementation complete; focused checks passed. Awaiting implementation-outcome approval and renewed Stage 6 review.
+- Sanitized errors: None observed in final test run.

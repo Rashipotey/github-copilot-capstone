@@ -1,0 +1,9 @@
+{
+	"servers": {
+		"atlassian revo": {
+			"url": "https://mcp.atlassian.com/v2/mcp",
+			"type": "http"
+		}
+	},
+	"inputs": []
+}

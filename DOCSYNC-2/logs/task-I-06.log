@@ -1,0 +1,16 @@
+## 2026-10-29T21:28:54.6462556+05:30
+- Task: I-06 — Publish report with containment and no-replace
+- Agent: Orchestrator
+- Event type: start
+- Summary/evidence: I-01 and I-05 completed; user-authorized I-06 is dependency-ready. Start is recorded before delegation for output-path revalidation, safe exclusive report publication, cleanup, and CLI integration.
+- Outcome: In progress; delegation pending.
+- Sanitized errors: None observed.
+
+## 2026-10-29T21:36:45.8995192+05:30
+- Task: I-06 — Publish report with containment and no-replace
+- Agent: implementation-agent
+- Event type: outcome
+- Summary/evidence: Added fixed-report-only publication using the anchored directory helper, exclusive no-replace linking, path/reparse revalidation, collision handling, temporary cleanup, and CLI integration. Inspected src/docsync/drift.py, src/docsync/cli.py, existing src/docsync/artifacts.py primitives, and tests/test_drift_publishing.py.
+- Checks: py -3.14 -m pytest -q tests/test_drift_publishing.py tests/test_drift_cli.py tests/test_drift_analysis.py tests/test_drift_evidence.py tests/test_drift_matching.py — 49 passed.
+- Outcome: Complete; I-07 prerequisites satisfied.
+- Sanitized errors: None observed in final focused run.

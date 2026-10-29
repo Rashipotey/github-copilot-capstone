@@ -1,13 +1,17 @@
 import argparse
+import sys
 from pathlib import Path
 from typing import Sequence
 
 from docsync.config import (
     DEFAULT_MAX_CHANGED_FILES,
     DEFAULT_MAX_DIFF_BYTES,
+    DRIFT_REPORT_FILENAME,
+    DriftConfig,
     RunConfig,
     normalize_exclude_pattern,
 )
+from docsync.drift import run_drift
 from docsync.models import DiffScope
 from docsync.pipeline import run_pipeline
 
@@ -35,8 +39,23 @@ def _exclude_pattern(value: str) -> str:
         raise argparse.ArgumentTypeError("expected a repo-relative POSIX glob") from exc
 
 
+def _required_path(value: str) -> Path:
+    if not value.strip():
+        raise argparse.ArgumentTypeError("expected a non-empty path")
+    return Path(value)
+
+
+def _required_text(value: str) -> str:
+    if not value.strip():
+        raise argparse.ArgumentTypeError("expected a non-empty value")
+    return value
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = _SafeArgumentParser(prog="docsync", description="Analyze local repository changes.")
+    parser = _SafeArgumentParser(
+        prog="docsync",
+        description="Analyze local repository changes. Use 'docsync drift' for a drift report.",
+    )
     parser.add_argument("--repo", type=Path, default=Path("."), metavar="PATH")
 
     scope_group = parser.add_mutually_exclusive_group()
@@ -58,6 +77,50 @@ def build_parser() -> argparse.ArgumentParser:
         type=_positive_integer,
         default=DEFAULT_MAX_DIFF_BYTES,
         metavar="N",
+    )
+    return parser
+
+
+def build_drift_parser() -> argparse.ArgumentParser:
+    parser = _SafeArgumentParser(
+        prog="docsync drift",
+        description="Analyze potential documentation drift without creating patches.",
+    )
+    parser.add_argument("--repo", type=Path, default=Path("."), metavar="PATH")
+    parser.add_argument(
+        "--exclude",
+        action="append",
+        type=_exclude_pattern,
+        default=[],
+        metavar="GLOB",
+        help="exclude matching repository paths from analysis (repeatable)",
+    )
+    parser.add_argument(
+        "--max-changed-files",
+        type=_positive_integer,
+        default=DEFAULT_MAX_CHANGED_FILES,
+        metavar="N",
+        help="maximum changed paths to acquire",
+    )
+    parser.add_argument(
+        "--max-diff-bytes",
+        type=_positive_integer,
+        default=DEFAULT_MAX_DIFF_BYTES,
+        metavar="N",
+        help="maximum combined Git diff size",
+    )
+    parser.add_argument(
+        "--output-dir",
+        required=True,
+        type=_required_path,
+        metavar="PATH",
+        help=f"existing directory for {DRIFT_REPORT_FILENAME}",
+    )
+    parser.add_argument(
+        "--target",
+        type=_required_text,
+        metavar="DOC",
+        help="optional explicit Markdown documentation target",
     )
     return parser
 
@@ -91,8 +154,25 @@ def parse_args(args: Sequence[str] | None = None) -> RunConfig:
     )
 
 
+def parse_drift_args(args: Sequence[str] | None = None) -> DriftConfig:
+    parsed = build_drift_parser().parse_args(args)
+    return DriftConfig(
+        repo=parsed.repo,
+        output_dir=parsed.output_dir,
+        target=parsed.target,
+        excludes=tuple(parsed.exclude),
+        max_changed_files=parsed.max_changed_files,
+        max_diff_bytes=parsed.max_diff_bytes,
+    )
+
+
 def main(args: Sequence[str] | None = None) -> int:
-    result = run_pipeline(parse_args(args))
+    argv = list(sys.argv[1:] if args is None else args)
+    if argv and argv[0] == "drift":
+        config = parse_drift_args(argv[1:])
+        return run_drift(config)
+
+    result = run_pipeline(parse_args(argv))
     print(result.summary)
     return result.exit_code
 
